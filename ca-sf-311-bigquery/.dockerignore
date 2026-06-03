@@ -1,0 +1,34 @@
+# Ignore Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# Ignore local config and credentials
+.env
+.gcloud/
+*credentials*.json
+*key*.json
+
+# Ignore system and IDE files
+.DS_Store
+.vscode/
+.idea/
+.git/
+.gitignore
+
+# Ignore test files (optional, but keeps container slim and production-focused)
+test_server.py

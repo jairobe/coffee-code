@@ -111,9 +111,91 @@ python3 server.py
 
 ---
 
+## 🐳 Containerization with Docker
+
+You can package and run this MCP server as a secure, lightweight Docker container. This eliminates the need to manage Python runtimes, virtual environments, or system packages on the host machine.
+
+The provided `Dockerfile` builds a minimal image using a secure, non-privileged user (`mcpuser`) and configures Python to run unbuffered for reliable stdio communication.
+
+### 1. Build the Docker Image
+
+From the project root directory, run:
+
+```bash
+docker build -t sf-311-bigquery-mcp ./ca-sf-311-bigquery
+```
+
+### 2. Verify Startup (Smoke Test)
+
+You can verify the container is correctly built and starts up by piping an empty input into it:
+
+```bash
+echo "" | docker run -i --rm sf-311-bigquery-mcp
+```
+
+This should print the FastMCP startup banner and then gracefully exit on standard input EOF.
+
+### 3. Run with Google Cloud Credentials
+
+Since the MCP server queries Google Cloud BigQuery, you must pass credentials into the Docker container. You can do this in one of three ways:
+
+#### Option A: Pass raw service account JSON string (Recommended for easy setup)
+```bash
+docker run -i --rm \
+  -e GOOGLE_CLOUD_PROJECT="your-gcp-project-id" \
+  -e BIGQUERY_CREDENTIALS_JSON='{...your service account json...}' \
+  sf-311-bigquery-mcp
+```
+
+#### Option B: Mount your local gcloud Application Default Credentials (ADC)
+If you already ran `gcloud auth application-default login` on your host machine, you can mount your credentials directory:
+```bash
+docker run -i --rm \
+  -v "$HOME/.config/gcloud:/home/mcpuser/.config/gcloud" \
+  -e GOOGLE_CLOUD_PROJECT="your-gcp-project-id" \
+  sf-311-bigquery-mcp
+```
+
+#### Option C: Mount a service account key JSON file
+```bash
+docker run -i --rm \
+  -v "/path/to/key.json:/app/key.json" \
+  -e GOOGLE_APPLICATION_CREDENTIALS="/app/key.json" \
+  -e GOOGLE_CLOUD_PROJECT="your-gcp-project-id" \
+  sf-311-bigquery-mcp
+```
+
+---
+
 ## 🤖 Configuring in AI Client Applications
 
-To integrate this server into an AI-powered editor or developer tool, register it in your client's MCP configuration file (typically `mcp_config.json` or `config.json`):
+To integrate this server into an AI-powered editor or developer tool, register it in your client's MCP configuration file (typically `mcp_config.json` or `config.json`). You can use either the local Python execution or the zero-dependency Docker execution.
+
+### Option 1: Docker Configuration (Zero local dependencies - Recommended)
+
+```json
+{
+  "mcpServers": {
+    "sf-311-bigquery-docker": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e", "GOOGLE_CLOUD_PROJECT",
+        "-e", "BIGQUERY_CREDENTIALS_JSON",
+        "sf-311-bigquery-mcp"
+      ],
+      "env": {
+        "GOOGLE_CLOUD_PROJECT": "your-gcp-project-id",
+        "BIGQUERY_CREDENTIALS_JSON": "optional-raw-service-account-json-string-here"
+      }
+    }
+  }
+}
+```
+
+### Option 2: Local Python Configuration
 
 ```json
 {

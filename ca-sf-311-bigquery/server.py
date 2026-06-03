@@ -1,3 +1,4 @@
+
 import os
 import json
 import re
@@ -352,5 +353,62 @@ def run_custom_query(sql_query: str) -> str:
         return f"Error executing custom query: {str(e)}"
 
 
+class NormalizeAcceptHeaderMiddleware:
+    """
+    ASGI middleware to normalize Accept headers for the MCP Streamable HTTP transport.
+    The MCP spec and SDK are strict: POST requests must accept both application/json
+    and text/event-stream. Some clients/proxies omit or send partial Accept headers,
+    resulting in 406 Not Acceptable errors. This middleware overrides the Accept header
+    to guarantee both types are supported.
+    """
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            headers = list(scope.get("headers", []))
+            accept_idx = -1
+            for idx, (name, val) in enumerate(headers):
+                if name.lower() == b"accept":
+                    accept_idx = idx
+                    break
+            
+            if accept_idx >= 0:
+                headers[accept_idx] = (b"accept", b"application/json, text/event-stream")
+            else:
+                headers.append((b"accept", b"application/json, text/event-stream"))
+                
+            scope["headers"] = headers
+            
+        await self.app(scope, receive, send)
+
+
 if __name__ == "__main__":
-    mcp.run()
+    # When deployed to Cloud Run or running as a web service, PORT is specified.
+    # We default to SSE transport if PORT is defined.
+    if "PORT" in os.environ:
+        from starlette.middleware import Middleware
+        from starlette.middleware.cors import CORSMiddleware
+
+        port = int(os.environ.get("PORT", 8080))
+        mcp.run(
+            transport="http",
+            path="/sse",
+            host="0.0.0.0",
+            port=port,
+            stateless_http=True,
+            json_response=True,
+            middleware=[
+                Middleware(NormalizeAcceptHeaderMiddleware),
+                Middleware(
+                    CORSMiddleware,
+                    allow_origins=["*"],
+                    allow_methods=["*"],
+                    allow_headers=["*"],
+                    expose_headers=["mcp-session-id"],
+                )
+            ],
+        )
+    else:
+        mcp.run()
+
