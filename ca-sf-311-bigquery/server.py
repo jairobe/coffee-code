@@ -403,6 +403,7 @@ if __name__ == "__main__":
                     allow_origins=["*"],
                     allow_methods=["*"],
                     allow_headers=["*"],
+                    expose_headers=["mcp-session-id"],
                 )
             ],
         )
