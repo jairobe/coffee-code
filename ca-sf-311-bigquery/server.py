@@ -396,6 +396,8 @@ if __name__ == "__main__":
             path="/sse",
             host="0.0.0.0",
             port=port,
+            stateless_http=True,
+            json_response=True,
             middleware=[
                 Middleware(NormalizeAcceptHeaderMiddleware),
                 Middleware(
