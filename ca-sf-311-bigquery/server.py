@@ -1,3 +1,4 @@
+
 import os
 import json
 import re
@@ -353,4 +354,25 @@ def run_custom_query(sql_query: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    # When deployed to Cloud Run or running as a web service, PORT is specified.
+    # We default to SSE transport if PORT is defined.
+    if "PORT" in os.environ:
+        from starlette.middleware import Middleware
+        from starlette.middleware.cors import CORSMiddleware
+
+        port = int(os.environ.get("PORT", 8080))
+        mcp.run(
+            transport="sse",
+            host="0.0.0.0",
+            port=port,
+            middleware=[
+                Middleware(
+                    CORSMiddleware,
+                    allow_origins=["*"],
+                    allow_methods=["*"],
+                    allow_headers=["*"],
+                )
+            ],
+        )
+    else:
+        mcp.run()
